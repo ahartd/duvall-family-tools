@@ -160,10 +160,13 @@ login screen. The calendar URL is:
 https://<your-app>.onrender.com/calendar/?token=<CALENDAR_SHARE_TOKEN>
 ```
 
-On first load the app stores the token in `localStorage` and strips it from the
-visible URL, so the iPad address bar doesn't show the secret. The API checks the
-token with a constant-time comparison and accepts it via either the `?token=`
-query param or an `X-Calendar-Token` header.
+On load the app caches the token in `localStorage` and **keeps it in the URL** so
+that an iOS "Add to Home Screen" bookmark still carries it — a standalone
+home-screen web app gets its own storage and can't see Safari's `localStorage`,
+so the URL is the only reliable carrier across that boundary. In standalone
+(kiosk) mode there's no visible address bar, so the secret isn't shown on the
+wall. The token is sent to the API only as an `X-Calendar-Token` header (never a
+query param, so it stays out of server logs), checked with a constant-time compare.
 
 Generate a token locally with:
 `python -c "import secrets; print(secrets.token_urlsafe(32))"` (or let Render
@@ -215,15 +218,28 @@ docker run --rm -p 10000:10000 \
 
 ## iPad kiosk setup
 
-1. Open the secret link in **Safari** on the iPad.
-2. **Share → Add to Home Screen.** The app launches full-screen (the meta tags
-   enable standalone/kiosk mode) and the secret stays in `localStorage`.
-3. Settings → Display & Brightness → **Auto-Lock = Never** (and consider Guided
-   Access to lock it to this one app). Keep it on a charger.
+1. Open the **full** secret link (`…/calendar/?token=…`) in **Safari** on the iPad.
+2. **Share → Add to Home Screen**, then launch the app from the new icon. The
+   token rides in the bookmarked URL on purpose: iOS gives a standalone
+   home-screen web app its **own storage**, separate from Safari, so the URL is
+   the only thing that reliably carries the secret across (no address bar is
+   shown in standalone mode, so it isn't visible on the wall).
+3. Settings → Display & Brightness → **Auto-Lock = Never**, keep it on a charger,
+   and optionally use **Guided Access** to lock the iPad to this one app.
 
-The calendar auto-refreshes events every 5 minutes, updates the clock/today
-highlight continuously, and re-fetches whenever the screen wakes. Use the
-**Month / Week / Agenda** toggle to switch views; Month is the default.
+On the wall it looks after itself:
+
+- Events refresh every 5 minutes; the clock and "today" highlight tick
+  continuously; it re-fetches the instant the screen wakes.
+- It re-centers on the current month/week after ~10 minutes idle (so it rolls
+  over at midnight and month boundaries on its own), and reloads daily at 4am to
+  pick up anything you deploy. Use the **Month / Week / Agenda** toggle to switch
+  views; Month is the default.
+
+> **Seeing "A valid calendar access token is required"?** The home-screen icon
+> was saved without the token. Delete the icon, open a fresh `…/calendar/?token=…`
+> link in Safari, and **Add to Home Screen** again (this needs the deployed app
+> to include the fix that keeps the token in the URL).
 
 ---
 

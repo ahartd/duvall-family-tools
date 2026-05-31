@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { fetchEvents } from './api'
 import { useToken } from './useToken'
 import { bucketByDay } from './events'
-import { addDays, monthGridRange, startOfDay } from './dates'
+import { addDays, dayKey, monthGridRange, startOfDay } from './dates'
 import type { CalendarEvent, View } from './types'
 import { Header } from './components/Header'
 import { MonthGrid } from './components/MonthGrid'
@@ -11,6 +11,8 @@ import { WeekView } from './components/WeekView'
 
 const DATA_REFRESH_MS = 5 * 60 * 1000 // re-fetch events every 5 minutes
 const CLOCK_TICK_MS = 30 * 1000 // update the clock / "today" highlight
+const AUTO_RETURN_MS = 10 * 60 * 1000 // re-center on "today" after this much idle
+const RELOAD_HOUR = 4 // local hour for the once-a-day kiosk reload
 
 // The fetch window for the current view + anchor date.
 function rangeFor(view: View, anchor: Date): { start: Date; end: Date } {
@@ -32,6 +34,23 @@ function shift(view: View, anchor: Date, dir: number): Date {
   return addDays(anchor, 30 * dir)
 }
 
+// True when the anchored period already contains `today`, so a kiosk left idle
+// only re-centers once the date has actually moved on (e.g. across midnight).
+function isShowingPeriod(view: View, anchor: Date, today: Date): boolean {
+  if (view === 'month') {
+    return (
+      anchor.getFullYear() === today.getFullYear() &&
+      anchor.getMonth() === today.getMonth()
+    )
+  }
+  if (view === 'week') {
+    const aStart = addDays(startOfDay(anchor), -anchor.getDay())
+    const tStart = addDays(startOfDay(today), -today.getDay())
+    return dayKey(aStart) === dayKey(tStart)
+  }
+  return dayKey(startOfDay(anchor)) === dayKey(startOfDay(today))
+}
+
 export default function App() {
   const { token, ready } = useToken()
   const [view, setView] = useState<View>('month')
@@ -45,9 +64,15 @@ export default function App() {
   const { start, end } = useMemo(() => rangeFor(view, anchor), [view, anchor])
 
   // Track the in-flight request so a newer load always supersedes an older one
-  // (e.g. a periodic/visibility refresh overlapping a view or month change) —
-  // only the latest fetch may write state.
+  // (e.g. a periodic/visibility refresh overlapping a view or month change).
   const inFlight = useRef<AbortController | null>(null)
+
+  // Timestamp of the last manual interaction; gates kiosk auto-return so we
+  // don't yank the view back to "today" while someone is browsing other months.
+  const lastInteraction = useRef<number>(Date.now())
+  const markInteraction = useCallback(() => {
+    lastInteraction.current = Date.now()
+  }, [])
 
   const load = useCallback(async () => {
     inFlight.current?.abort()
@@ -97,20 +122,56 @@ export default function App() {
     }
   }, [load])
 
+  // Kiosk auto-return: when left idle, keep the view on the current period so it
+  // rolls over at midnight / month boundaries with nobody touching the iPad.
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (Date.now() - lastInteraction.current < AUTO_RETURN_MS) return
+      const today = new Date()
+      if (!isShowingPeriod(view, anchor, today)) setAnchor(today)
+    }, 60 * 1000)
+    return () => clearInterval(id)
+  }, [view, anchor])
+
+  // Kiosk daily reload: reload once a day (at RELOAD_HOUR local, or on the next
+  // wake after it) so the display picks up new deploys without intervention.
+  useEffect(() => {
+    const next = new Date()
+    next.setHours(RELOAD_HOUR, 0, 0, 0)
+    if (next.getTime() <= Date.now()) next.setDate(next.getDate() + 1)
+    const target = next.getTime()
+    const id = setInterval(() => {
+      if (Date.now() >= target) window.location.reload()
+    }, 60 * 1000)
+    return () => clearInterval(id)
+  }, [])
+
   const byDay = useMemo(() => bucketByDay(events), [events])
 
   return (
     <div className="app">
       <Header
         view={view}
-        onView={setView}
+        onView={(v) => {
+          markInteraction()
+          setView(v)
+        }}
         anchor={anchor}
         now={now}
         loading={loading}
         lastUpdated={lastUpdated}
-        onPrev={() => setAnchor((a) => shift(view, a, -1))}
-        onNext={() => setAnchor((a) => shift(view, a, 1))}
-        onToday={() => setAnchor(new Date())}
+        onPrev={() => {
+          markInteraction()
+          setAnchor((a) => shift(view, a, -1))
+        }}
+        onNext={() => {
+          markInteraction()
+          setAnchor((a) => shift(view, a, 1))
+        }}
+        onToday={() => {
+          markInteraction()
+          setAnchor(new Date())
+        }}
       />
       {error ? (
         <div className="banner error">
