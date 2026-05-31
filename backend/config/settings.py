@@ -26,7 +26,7 @@ if _env_file.exists():
 DEBUG = env.bool("DJANGO_DEBUG", default=False)
 
 # --- Security --------------------------------------------------------------
-SECRET_KEY = env.str("DJANGO_SECRET_KEY", default="")
+SECRET_KEY = env.str("DJANGO_SECRET_KEY", default="aslfdhnak7634yrkewhsfkashdfqwef")
 if not SECRET_KEY:
     if DEBUG:
         SECRET_KEY = "django-insecure-dev-key-change-me"  # local only
