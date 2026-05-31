@@ -1,0 +1,14 @@
+{
+  "name": "duvall-family-tools-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:calendar": "npm run dev -w @apps/calendar",
+    "build": "npm run build --workspaces --if-present",
+    "build:calendar": "npm run build -w @apps/calendar"
+  }
+}

@@ -1,0 +1,29 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# Deploy: in the Render dashboard, New > Blueprint, point it at this repo.
+# A single free web service serves both the JSON API and the built React apps.
+services:
+  - type: web
+    name: duvall-family-tools
+    runtime: docker        # Render builds/runs from ./Dockerfile (controls Python)
+    plan: free
+    branch: main
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: DJANGO_DEBUG
+        value: "false"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true      # Render generates a strong random value
+      - key: CALENDAR_SHARE_TOKEN
+        generateValue: true      # the unguessable "secret link" token
+      # --- Google Calendar (set these manually in the dashboard) ---
+      - key: GOOGLE_OAUTH_CLIENT_ID
+        sync: false
+      - key: GOOGLE_OAUTH_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REFRESH_TOKEN
+        sync: false
+      - key: GOOGLE_CALENDAR_ID
+        value: primary

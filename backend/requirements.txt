@@ -1,0 +1,10 @@
+# Pinned to the versions pip resolved for Python 3.14 (see README for details).
+Django==6.0.5
+djangorestframework==3.17.1
+gunicorn==26.0.0
+whitenoise==6.12.0
+django-environ==0.13.0
+google-api-python-client==2.197.0
+google-auth==2.53.0
+google-auth-oauthlib==1.4.0
+google-auth-httplib2==0.4.0
