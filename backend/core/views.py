@@ -17,15 +17,26 @@ def home(request):
         {
             "name": "Family Dashboard",
             "path": "/dashboard/",
+            "icon": "🏠",
             "description": "At-a-glance clock, weather, and today's agenda for the wall display.",
         },
         {
             "name": "Family Calendar",
             "path": "/calendar/",
+            "icon": "📅",
             "description": "Shared Google Calendar, optimised for an iPad wall display.",
         },
+        {
+            "name": "Family Recipes",
+            "path": "/recipes/",
+            "icon": "🍳",
+            "description": "Dinner ideas and a searchable library of our favourite recipes.",
+        },
     ]
-    return render(request, "home.html", {"tools": tools})
+    # Carry the secret-link token through to each app, so opening the launcher
+    # via /?token=… keeps the kiosk authenticated as it hops between tools.
+    token = request.GET.get("token", "")
+    return render(request, "home.html", {"tools": tools, "token": token})
 
 
 @require_GET

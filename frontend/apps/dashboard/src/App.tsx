@@ -3,6 +3,7 @@ import { fetchTodayEvents, fetchWeather } from './api'
 import { useToken } from './useToken'
 import { addDays, startOfDay } from './dates'
 import type { CalendarEvent, Weather } from './types'
+import { AppNav } from './components/AppNav'
 import { WeatherPanel } from './components/WeatherPanel'
 import { Agenda } from './components/Agenda'
 
@@ -114,6 +115,7 @@ export default function App() {
 
   return (
     <div className="dash">
+      <AppNav current="dashboard" />
       <header className="dash-head">
         <div className="clock">{time}</div>
         <div className="date">{date}</div>

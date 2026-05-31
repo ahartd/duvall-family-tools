@@ -22,4 +22,5 @@ urlpatterns = [
     # Micro-app shells (add a line here as you add apps)
     path("calendar/", core_views.app_index, {"app_name": "calendar"}, name="calendar-app"),
     path("dashboard/", core_views.app_index, {"app_name": "dashboard"}, name="dashboard-app"),
+    path("recipes/", core_views.app_index, {"app_name": "recipes"}, name="recipes-app"),
 ]

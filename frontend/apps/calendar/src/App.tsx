@@ -4,6 +4,7 @@ import { useToken } from './useToken'
 import { bucketByDay } from './events'
 import { addDays, dayKey, monthGridRange, startOfDay } from './dates'
 import type { CalendarEvent, View } from './types'
+import { AppNav } from './components/AppNav'
 import { Header } from './components/Header'
 import { MonthGrid } from './components/MonthGrid'
 import { AgendaList } from './components/AgendaList'
@@ -150,6 +151,7 @@ export default function App() {
 
   return (
     <div className="app">
+      <AppNav current="calendar" />
       <Header
         view={view}
         onView={(v) => {

@@ -13,8 +13,11 @@ calendar reading one Google Calendar.
 - `backend/` — Django. `config/` (settings/urls/wsgi), `core/` (shared: secret-link
   auth, `/healthz`, the generic "serve a built app" view), `calendar_app/` (the
   Google Calendar tool + the `google_auth` management command).
-- `frontend/` — npm-workspaces monorepo. `apps/calendar/` is the calendar SPA; add
-  tools under `apps/<tool>/`.
+- `frontend/` — npm-workspaces monorepo. Apps so far: `apps/calendar/` (Google
+  Calendar SPA), `apps/dashboard/` (clock + weather + today's agenda wall display),
+  `apps/recipes/` (dinner ideas + searchable recipe library). Add tools under
+  `apps/<tool>/`. Every app renders a shared `components/AppNav.tsx` (a copy per
+  app) — the slim top bar that switches between tools and carries the `?token`.
 - `Dockerfile` (multi-stage: Node builds frontend → Python runs it), `render.yaml`
   (Render blueprint).
 
@@ -27,8 +30,15 @@ Backend — run from the repo root; `PYTHONPATH=backend` makes the `config`/`cor
 - Collect static (after a frontend build): `… backend/manage.py collectstatic --noinput`
 
 Frontend — workspace commands from the repo root:
-- Dev (HMR, proxies `/api` → `:8000`): `npm --prefix frontend run dev:calendar` → http://localhost:5173
+- Dev (HMR, proxies `/api` → `:8000`): `npm --prefix frontend run dev:calendar` (or
+  `dev:dashboard` / `dev:recipes`) → http://localhost:5173
 - Build all apps: `npm --prefix frontend run build` → `frontend/dist/<app>/`
+
+Recipes data — the recipes app ships a **baked snapshot** of the family "Recipes
+to try" Google Sheet (no runtime Google call, no extra OAuth scope). To refresh:
+re-export the sheet to `frontend/apps/recipes/data/source.md`, then run
+`python frontend/apps/recipes/data/build_data.py` (rewrites `src/data/recipes.json`)
+and rebuild. See that script's docstring for the export format.
 
 Production parity: `docker build -t dft . && docker run --rm -p 10000:10000 -e DJANGO_SECRET_KEY=x -e CALENDAR_SHARE_TOKEN=x dft`
 

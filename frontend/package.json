@@ -9,8 +9,10 @@
   "scripts": {
     "dev:calendar": "npm run dev -w @apps/calendar",
     "dev:dashboard": "npm run dev -w @apps/dashboard",
+    "dev:recipes": "npm run dev -w @apps/recipes",
     "build": "npm run build --workspaces --if-present",
     "build:calendar": "npm run build -w @apps/calendar",
-    "build:dashboard": "npm run build -w @apps/dashboard"
+    "build:dashboard": "npm run build -w @apps/dashboard",
+    "build:recipes": "npm run build -w @apps/recipes"
   }
 }
