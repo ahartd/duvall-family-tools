@@ -8,7 +8,9 @@
   ],
   "scripts": {
     "dev:calendar": "npm run dev -w @apps/calendar",
+    "dev:dashboard": "npm run dev -w @apps/dashboard",
     "build": "npm run build --workspaces --if-present",
-    "build:calendar": "npm run build -w @apps/calendar"
+    "build:calendar": "npm run build -w @apps/calendar",
+    "build:dashboard": "npm run build -w @apps/dashboard"
   }
 }

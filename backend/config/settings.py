@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "core",
     "calendar_app",
+    "weather_app",
 ]
 
 MIDDLEWARE = [
@@ -182,6 +183,11 @@ GOOGLE_TOKEN_URI = env.str("GOOGLE_TOKEN_URI", default="https://oauth2.googleapi
 
 # --- "Secret link" access token --------------------------------------------
 CALENDAR_SHARE_TOKEN = env.str("CALENDAR_SHARE_TOKEN", default="")
+
+# --- Weather (Open-Meteo — no API key required) ----------------------------
+WEATHER_LATITUDE = env.str("WEATHER_LATITUDE", default="")
+WEATHER_LONGITUDE = env.str("WEATHER_LONGITUDE", default="")
+WEATHER_TEMPERATURE_UNIT = env.str("WEATHER_TEMPERATURE_UNIT", default="fahrenheit")
 
 # --- Logging ---------------------------------------------------------------
 LOGGING = {

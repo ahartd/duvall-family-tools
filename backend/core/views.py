@@ -15,6 +15,11 @@ def home(request):
     """Landing page listing the available tools."""
     tools = [
         {
+            "name": "Family Dashboard",
+            "path": "/dashboard/",
+            "description": "At-a-glance clock, weather, and today's agenda for the wall display.",
+        },
+        {
             "name": "Family Calendar",
             "path": "/calendar/",
             "description": "Shared Google Calendar, optimised for an iPad wall display.",

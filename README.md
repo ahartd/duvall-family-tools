@@ -23,7 +23,8 @@ duvall-family-tools/
 │   └── requirements.txt
 ├── frontend/                # npm-workspaces monorepo of React + TS micro-apps
 │   ├── package.json         #   workspaces: apps/*, packages/*
-│   └── apps/calendar/       #   the Calendar SPA (Vite + React 19 + TypeScript)
+│   ├── apps/calendar/       #   the Calendar SPA (Vite + React 19 + TypeScript)
+│   └── apps/dashboard/      #   the Dashboard SPA (clock + weather + today's agenda)
 ├── Dockerfile               # multi-stage: Node builds the frontend, Python runs it
 └── render.yaml              # Render Blueprint (one free web service)
 ```
@@ -272,6 +273,8 @@ Docker/Render pipeline all apply with no changes.
 | `GOOGLE_OAUTH_CLIENT_SECRET` | yes | " |
 | `GOOGLE_REFRESH_TOKEN` | yes | from `python manage.py google_auth` |
 | `GOOGLE_CALENDAR_ID` | – | defaults to `primary` |
+| `WEATHER_LATITUDE` / `WEATHER_LONGITUDE` | dashboard | your location for the weather panel (Open-Meteo, no key) |
+| `WEATHER_TEMPERATURE_UNIT` | – | `fahrenheit` (default) or `celsius` |
 | `DJANGO_ALLOWED_HOSTS` | – | auto-includes `.onrender.com` on Render |
 | `DATABASE_URL` | – | optional Postgres for future stateful tools |
 | `DJANGO_SECURE_SSL_REDIRECT` | – | leave off on Render (edge already redirects) |

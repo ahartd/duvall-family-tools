@@ -18,6 +18,8 @@ urlpatterns = [
     path("", core_views.home, name="home"),
     # APIs
     path("api/calendar/", include("calendar_app.urls")),
+    path("api/weather/", include("weather_app.urls")),
     # Micro-app shells (add a line here as you add apps)
     path("calendar/", core_views.app_index, {"app_name": "calendar"}, name="calendar-app"),
+    path("dashboard/", core_views.app_index, {"app_name": "dashboard"}, name="dashboard-app"),
 ]
