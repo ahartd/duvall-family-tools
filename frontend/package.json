@@ -10,9 +10,13 @@
     "dev:calendar": "npm run dev -w @apps/calendar",
     "dev:dashboard": "npm run dev -w @apps/dashboard",
     "dev:recipes": "npm run dev -w @apps/recipes",
+    "dev:todos": "npm run dev -w @apps/todos",
+    "dev:notes": "npm run dev -w @apps/notes",
     "build": "npm run build --workspaces --if-present",
     "build:calendar": "npm run build -w @apps/calendar",
     "build:dashboard": "npm run build -w @apps/dashboard",
-    "build:recipes": "npm run build -w @apps/recipes"
+    "build:recipes": "npm run build -w @apps/recipes",
+    "build:todos": "npm run build -w @apps/todos",
+    "build:notes": "npm run build -w @apps/notes"
   }
 }

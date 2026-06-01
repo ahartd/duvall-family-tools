@@ -32,6 +32,18 @@ def home(request):
             "icon": "🍳",
             "description": "Dinner ideas and a searchable library of our favourite recipes.",
         },
+        {
+            "name": "To-Dos",
+            "path": "/todos/",
+            "icon": "✅",
+            "description": "Shared to-do list with due dates and completion tracking.",
+        },
+        {
+            "name": "Notes & Lists",
+            "path": "/notes/",
+            "icon": "📝",
+            "description": "Shopping lists and notes you can check off and archive.",
+        },
     ]
     # Carry the secret-link token through to each app, so opening the launcher
     # via /?token=… keeps the kiosk authenticated as it hops between tools.

@@ -11,13 +11,18 @@ calendar reading one Google Calendar.
 
 ## Layout
 - `backend/` — Django. `config/` (settings/urls/wsgi), `core/` (shared: secret-link
-  auth, `/healthz`, the generic "serve a built app" view), `calendar_app/` (the
-  Google Calendar tool + the `google_auth` management command).
+  auth, `/healthz`, the generic "serve a built app" view, the `google_sheets.py`
+  Sheets datastore), `calendar_app/` (the Google Calendar tool + the `google_auth`
+  management command), `lists_app/` (todos + notes API, Sheets-backed).
 - `frontend/` — npm-workspaces monorepo. Apps so far: `apps/calendar/` (Google
   Calendar SPA), `apps/dashboard/` (clock + weather + today's agenda wall display),
-  `apps/recipes/` (dinner ideas + searchable recipe library). Add tools under
-  `apps/<tool>/`. Every app renders a shared `components/AppNav.tsx` (a copy per
-  app) — the slim top bar that switches between tools and carries the `?token`.
+  `apps/recipes/` (dinner ideas + searchable recipe library), `apps/todos/` (shared
+  to-do list w/ due dates), `apps/notes/` (shopping lists / notes you check off and
+  archive). Add tools under `apps/<tool>/`. Every app renders a shared
+  `components/AppNav.tsx` (a copy per app) — the slim top bar that switches between
+  tools and carries the `?token`.
+- `mcp_server/` — a thin MCP server (over the REST API) so Claude can add/edit
+  todos & list items by voice. Holds no data of its own.
 - `Dockerfile` (multi-stage: Node builds frontend → Python runs it), `render.yaml`
   (Render blueprint).
 
@@ -39,6 +44,20 @@ to try" Google Sheet (no runtime Google call, no extra OAuth scope). To refresh:
 re-export the sheet to `frontend/apps/recipes/data/source.md`, then run
 `python frontend/apps/recipes/data/build_data.py` (rewrites `src/data/recipes.json`)
 and rebuild. See that script's docstring for the export format.
+
+Todos / Notes storage — these are the only **stateful** tools, so they persist in
+a Google Sheet (`LISTS_SHEET_ID`) rather than the ephemeral SQLite DB. Tabs:
+`Todos`, `Lists`, `Items` (auto-created on first write). This needs the refresh
+token to carry the **read/write Sheets scope**, so after adding it you must re-run
+`manage.py google_auth` (now requests Calendar-read + Sheets-write) and update
+`GOOGLE_REFRESH_TOKEN`. `core/google_sheets.py:SheetTable` is the row-per-record
+helper; `lists_app/store.py` is the todos/notes logic (cached ~8s, busted on write).
+
+MCP server (voice) — `mcp_server/server.py` wraps the REST API as MCP tools
+(`add_todo`, `add_item`, `complete_todo`, `archive_list`, …). Config via env
+`DFT_BASE_URL` + `DFT_TOKEN` (the share token). `MCP_TRANSPORT=stdio` for Claude
+Desktop, `=http` (Streamable HTTP) for a mobile-reachable host. Voice input comes
+from the Claude client; the server just exposes the tools. See `mcp_server/README.md`.
 
 Production parity: `docker build -t dft . && docker run --rm -p 10000:10000 -e DJANGO_SECRET_KEY=x -e CALENDAR_SHARE_TOKEN=x dft`
 

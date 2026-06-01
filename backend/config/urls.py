@@ -19,8 +19,11 @@ urlpatterns = [
     # APIs
     path("api/calendar/", include("calendar_app.urls")),
     path("api/weather/", include("weather_app.urls")),
+    path("api/", include("lists_app.urls")),  # todos/ and notes/...
     # Micro-app shells (add a line here as you add apps)
     path("calendar/", core_views.app_index, {"app_name": "calendar"}, name="calendar-app"),
     path("dashboard/", core_views.app_index, {"app_name": "dashboard"}, name="dashboard-app"),
     path("recipes/", core_views.app_index, {"app_name": "recipes"}, name="recipes-app"),
+    path("todos/", core_views.app_index, {"app_name": "todos"}, name="todos-app"),
+    path("notes/", core_views.app_index, {"app_name": "notes"}, name="notes-app"),
 ]

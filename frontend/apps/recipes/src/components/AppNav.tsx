@@ -2,12 +2,14 @@
 // iPad can hop between tools without retyping URLs. A copy lives in each app
 // (matching this repo's "each app is self-contained" convention).
 
-type AppKey = 'dashboard' | 'calendar' | 'recipes'
+type AppKey = 'dashboard' | 'calendar' | 'recipes' | 'todos' | 'notes'
 
 const APPS: { key: AppKey; label: string; href: string; icon: string }[] = [
   { key: 'dashboard', label: 'Dashboard', href: '/dashboard/', icon: '🏠' },
   { key: 'calendar', label: 'Calendar', href: '/calendar/', icon: '📅' },
   { key: 'recipes', label: 'Recipes', href: '/recipes/', icon: '🍳' },
+  { key: 'todos', label: 'To-Dos', href: '/todos/', icon: '✅' },
+  { key: 'notes', label: 'Notes', href: '/notes/', icon: '📝' },
 ]
 
 // Carry the secret-link ?token across apps. iOS standalone (home-screen) mode

@@ -27,6 +27,9 @@ services:
         sync: false
       - key: GOOGLE_CALENDAR_ID
         value: primary
+      # --- Todos / Notes backing spreadsheet (needs the read+write Sheets scope) ---
+      - key: LISTS_SHEET_ID
+        sync: false              # id of the "Duvall Family Lists" Google Sheet
       # --- Weather (Open-Meteo, no key) ---
       - key: WEATHER_LATITUDE
         sync: false

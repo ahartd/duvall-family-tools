@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     "core",
     "calendar_app",
     "weather_app",
+    "lists_app",
 ]
 
 MIDDLEWARE = [
@@ -180,6 +181,10 @@ GOOGLE_OAUTH_CLIENT_SECRET = env.str("GOOGLE_OAUTH_CLIENT_SECRET", default="")
 GOOGLE_REFRESH_TOKEN = env.str("GOOGLE_REFRESH_TOKEN", default="")
 GOOGLE_CALENDAR_ID = env.str("GOOGLE_CALENDAR_ID", default="primary")
 GOOGLE_TOKEN_URI = env.str("GOOGLE_TOKEN_URI", default="https://oauth2.googleapis.com/token")
+
+# Backing spreadsheet for the todos / notes tools (read+write). Requires the
+# refresh token to carry the Sheets scope — re-run `manage.py google_auth`.
+LISTS_SHEET_ID = env.str("LISTS_SHEET_ID", default="")
 
 # --- "Secret link" access token --------------------------------------------
 CALENDAR_SHARE_TOKEN = env.str("CALENDAR_SHARE_TOKEN", default="")

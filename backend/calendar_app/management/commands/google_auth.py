@@ -1,4 +1,4 @@
-"""One-time helper to obtain a Google Calendar read-only refresh token.
+"""One-time helper to obtain the Google refresh token the platform runs on.
 
 Run this locally (it opens a browser):
 
@@ -8,15 +8,20 @@ It uses GOOGLE_OAUTH_CLIENT_ID / GOOGLE_OAUTH_CLIENT_SECRET (or a downloaded
 client-secret JSON via --client-secrets) to run the installed-app loopback
 flow, then prints the refresh token to paste into your deployment's
 GOOGLE_REFRESH_TOKEN environment variable.
+
+The token is granted two scopes: read-only Calendar (for the calendar/dashboard
+tools) and read/write Sheets (for the todos/notes tools, which store data in the
+backing spreadsheet). Re-run this whenever the set of scopes changes.
 """
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 from calendar_app.services import CALENDAR_READONLY_SCOPE
+from core.google_sheets import SHEETS_SCOPE
 
 
 class Command(BaseCommand):
-    help = "Obtain a Google Calendar read-only refresh token via the OAuth loopback flow."
+    help = "Obtain the Google refresh token (Calendar read + Sheets read/write) via OAuth."
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -41,7 +46,7 @@ class Command(BaseCommand):
         except ImportError as exc:
             raise CommandError("google-auth-oauthlib is not installed.") from exc
 
-        scopes = [CALENDAR_READONLY_SCOPE]
+        scopes = [CALENDAR_READONLY_SCOPE, SHEETS_SCOPE]
         client_secrets = options["client_secrets"]
 
         if client_secrets:
@@ -90,6 +95,7 @@ class Command(BaseCommand):
         self.stdout.write(f"GOOGLE_REFRESH_TOKEN={creds.refresh_token}\n")
         self.stdout.write(
             self.style.WARNING(
-                "\nKeep this secret — it grants read-only access to your calendar.\n"
+                "\nKeep this secret — it grants read-only calendar access and "
+                "read/write access to your Sheets.\n"
             )
         )
