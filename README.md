@@ -152,6 +152,62 @@ ID (Google Calendar → calendar settings → "Integrate calendar" → Calendar 
 
 ---
 
+## Todos & Notes storage (Google Sheet)
+
+The **Todos** and **Notes** tools are the only *stateful* ones, so they don't
+use SQLite (which is ephemeral on Render's free plan — see above). Instead they
+persist in a single **Google Sheet**, identified by the `LISTS_SHEET_ID` env var.
+The Calendar and Dashboard tools don't need any of this.
+
+### A. Create the sheet
+
+1. While signed in as the **same Google account** whose refresh token you use
+   (see above), create a new blank spreadsheet at <https://sheets.google.com>.
+   Name it anything (e.g. "Duvall Family Lists"). That account must have **edit
+   access**, which it does automatically as the owner.
+2. Copy its **ID** from the URL — the long string between `/d/` and `/edit`:
+   `https://docs.google.com/spreadsheets/d/`**`<THIS_PART>`**`/edit`.
+3. Set it as an env var (locally in `backend/.env`, and on Render):
+
+   ```ini
+   LISTS_SHEET_ID=1AbC...your-sheet-id...XyZ
+   ```
+
+You **don't** create any tabs or headers yourself — on the first write the app
+auto-creates three tabs with these columns:
+
+| Tab | Columns | Holds |
+|---|---|---|
+| `Todos` | id, title, due, done, created_at, completed_at | the shared to-do list |
+| `Lists` | id, title, archived, created_at, archived_at | each note / shopping list |
+| `Items` | id, list_id, text, checked, created_at | the lines within a list |
+
+You can open the sheet anytime to read or hand-edit the data; the app re-reads it
+(cached ~8s) on the next request.
+
+### B. Grant the Sheets scope (re-auth if needed)
+
+Reading/writing the sheet needs the `https://www.googleapis.com/auth/spreadsheets`
+scope **in addition to** the calendar-read scope. The `google_auth` helper already
+requests **both**, so:
+
+- **Fresh setup:** nothing extra — `python manage.py google_auth` grants both
+  scopes in one go.
+- **Existing calendar-only token** (created before the Todos/Notes tools existed):
+  your old `GOOGLE_REFRESH_TOKEN` lacks the Sheets scope, so writes will fail with
+  a permission error. **Re-run `python manage.py google_auth`**, approve the new
+  permission, and replace `GOOGLE_REFRESH_TOKEN` (locally and on Render).
+
+> If `LISTS_SHEET_ID` is unset, the Todos/Notes API returns a clear "not
+> configured" error and the rest of the platform (Calendar, Dashboard) keeps
+> working — the sheet is only required for those two tools.
+
+These same tools can also be driven by voice through the optional MCP server in
+`mcp_server/` (see its README); it talks to the REST API, so it relies on the
+exact same sheet.
+
+---
+
 ## The "secret link"
 
 Calendar access is gated by an unguessable token (`CALENDAR_SHARE_TOKEN`) — no
@@ -273,6 +329,7 @@ Docker/Render pipeline all apply with no changes.
 | `GOOGLE_OAUTH_CLIENT_SECRET` | yes | " |
 | `GOOGLE_REFRESH_TOKEN` | yes | from `python manage.py google_auth` |
 | `GOOGLE_CALENDAR_ID` | – | defaults to `primary` |
+| `LISTS_SHEET_ID` | todos/notes | id of the Google Sheet backing the Todos & Notes tools (auto-creates its tabs) |
 | `WEATHER_LATITUDE` / `WEATHER_LONGITUDE` | dashboard | your location for the weather panel (Open-Meteo, no key) |
 | `WEATHER_TEMPERATURE_UNIT` | – | `fahrenheit` (default) or `celsius` |
 | `DJANGO_ALLOWED_HOSTS` | – | auto-includes `.onrender.com` on Render |
