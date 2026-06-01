@@ -185,18 +185,34 @@ auto-creates three tabs with these columns:
 You can open the sheet anytime to read or hand-edit the data; the app re-reads it
 (cached ~8s) on the next request.
 
-### B. Grant the Sheets scope (re-auth if needed)
+### B. Enable the Sheets API + grant the scope (re-auth if needed)
 
-Reading/writing the sheet needs the `https://www.googleapis.com/auth/spreadsheets`
-scope **in addition to** the calendar-read scope. The `google_auth` helper already
-requests **both**, so:
+The calendar setup only enabled the *Calendar* API and its scope, so the Todos/
+Notes tools need two more things on the Google side (the app code already requests
+the scope — there's nothing to change there):
+
+1. **Enable the Google Sheets API.** *APIs & Services → Library →* search
+   "**Google Sheets API**" → **Enable**. Without this, writes fail with a 403
+   even if the token has the right scope.
+2. **Add the scope to the OAuth consent screen.** Under *Data Access*, add
+   `https://www.googleapis.com/auth/spreadsheets` (Google marks it **sensitive**,
+   exactly like the calendar-readonly scope — expected, not "restricted").
+
+The `google_auth` helper already requests **both** scopes (calendar-read +
+spreadsheets), so:
 
 - **Fresh setup:** nothing extra — `python manage.py google_auth` grants both
   scopes in one go.
 - **Existing calendar-only token** (created before the Todos/Notes tools existed):
-  your old `GOOGLE_REFRESH_TOKEN` lacks the Sheets scope, so writes will fail with
-  a permission error. **Re-run `python manage.py google_auth`**, approve the new
-  permission, and replace `GOOGLE_REFRESH_TOKEN` (locally and on Render).
+  a token's scopes are frozen at consent time, so your old `GOOGLE_REFRESH_TOKEN`
+  can't touch Sheets and writes will fail with a permission error. **Re-run
+  `python manage.py google_auth`**, approve the new permission, and replace
+  `GOOGLE_REFRESH_TOKEN` (locally and on Render).
+
+> **Heads-up on scope breadth:** `.../auth/spreadsheets` is **account-wide**
+> read/write — Google has no per-file OAuth scope, so this token can reach *every*
+> spreadsheet that account can. Fine for personal/family use; if you'd rather
+> contain it, use a dedicated Google account that owns only this sheet.
 
 > If `LISTS_SHEET_ID` is unset, the Todos/Notes API returns a clear "not
 > configured" error and the rest of the platform (Calendar, Dashboard) keeps
