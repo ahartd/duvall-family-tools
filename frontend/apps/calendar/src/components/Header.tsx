@@ -10,6 +10,7 @@ interface Props {
   onPrev: () => void
   onNext: () => void
   onToday: () => void
+  onAdd: () => void
 }
 
 const MONTHS = [
@@ -32,7 +33,7 @@ function periodLabel(view: View, anchor: Date): string {
 }
 
 export function Header({
-  view, onView, anchor, now, loading, lastUpdated, onPrev, onNext, onToday,
+  view, onView, anchor, now, loading, lastUpdated, onPrev, onNext, onToday, onAdd,
 }: Props) {
   const time = now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
   const date = now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
@@ -70,6 +71,9 @@ export function Header({
             </button>
           ))}
         </div>
+        <button className="add-event" onClick={onAdd} aria-label="Add event">
+          <span aria-hidden="true">+</span> Add
+        </button>
       </div>
     </header>
   )

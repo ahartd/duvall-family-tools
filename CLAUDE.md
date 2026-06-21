@@ -48,10 +48,34 @@ and rebuild. See that script's docstring for the export format.
 Todos / Notes storage — these are the only **stateful** tools, so they persist in
 a Google Sheet (`LISTS_SHEET_ID`) rather than the ephemeral SQLite DB. Tabs:
 `Todos`, `Lists`, `Items` (auto-created on first write). This needs the refresh
-token to carry the **read/write Sheets scope**, so after adding it you must re-run
-`manage.py google_auth` (now requests Calendar-read + Sheets-write) and update
-`GOOGLE_REFRESH_TOKEN`. `core/google_sheets.py:SheetTable` is the row-per-record
-helper; `lists_app/store.py` is the todos/notes logic (cached ~8s, busted on write).
+token to carry the **read/write Sheets scope** *and* the **Calendar-events write
+scope** (see next paragraph), so after changing scopes you must re-run
+`manage.py google_auth` (now requests Calendar read + Calendar-events write +
+Sheets write) and update `GOOGLE_REFRESH_TOKEN`. `core/google_sheets.py:SheetTable`
+is the row-per-record helper; `lists_app/store.py` is the todos/notes logic
+(cached ~8s, busted on write).
+
+Todos ↔ Calendar mirror — a todo with a `due` date is reflected onto the Google
+Calendar as an **all-day event** (so it shows on the wall display). The link is
+the `event_id` column on the `Todos` tab: `lists_app/store.py:_sync_event`
+creates/patches/deletes the event as the todo's title/date changes, and
+`delete_todo` removes it; **completing** a todo leaves its event in place. The
+write side lives in `calendar_app/services.py` (`create_event`/`update_event`/
+`delete_event`, via `CALENDAR_WRITE_SCOPE`) and is **best-effort** — a Calendar
+failure is logged and never blocks the todo write. Sheets created before this
+feature get the `event_id` header added once via `store._ensure_todos_schema()`.
+(All-day end dates are exclusive in the Calendar API — a one-day event ends the
+next day; see `services._all_day_body`.)
+
+Creating events from the calendar UI — the calendar SPA has an "+ Add" button
+(and tap-a-day in month/week views) that opens a form for an all-day **or** timed
+event. It POSTs to the same `EventsView` (`POST /api/calendar/events`), which
+validates and calls `services.insert_event` (reusing `CALENDAR_WRITE_SCOPE` — no
+new OAuth). Timed events send a naive local `dateTime` + the device's IANA
+`timeZone` (DST-safe; the server doesn't compute offsets). A write bumps an
+`events:ver` cache generation (`views._bump_events_version`) so the read cache
+doesn't hide the new event; the frontend also inserts it optimistically. The
+shared `HasCalendarToken` permission gates the POST automatically.
 
 MCP server (voice) — `mcp_server/server.py` wraps the REST API as MCP tools
 (`add_todo`, `add_item`, `complete_todo`, `archive_list`, …). Config via env

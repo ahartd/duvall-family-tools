@@ -6,12 +6,13 @@ interface Props {
   anchor: Date
   now: Date
   byDay: Map<string, CalendarEvent[]>
+  onAddDay: (dayKey: string) => void
 }
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MAX_PILLS = 4
 
-export function MonthGrid({ anchor, now, byDay }: Props) {
+export function MonthGrid({ anchor, now, byDay, onAddDay }: Props) {
   const { gridStart } = monthGridRange(anchor)
   const days = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i))
   const todayKey = dayKey(now)
@@ -34,7 +35,15 @@ export function MonthGrid({ anchor, now, byDay }: Props) {
             d.getMonth() !== currentMonth ? 'other-month' : '',
           ].filter(Boolean).join(' ')
           return (
-            <div key={key} className={classes}>
+            <div
+              key={key}
+              className={classes}
+              role="button"
+              tabIndex={0}
+              onClick={() => onAddDay(key)}
+              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onAddDay(key)}
+              title="Add an event on this day"
+            >
               <div className="day-number">{d.getDate()}</div>
               <div className="day-events">
                 {events.slice(0, MAX_PILLS).map((ev, i) => (

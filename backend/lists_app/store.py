@@ -1,9 +1,12 @@
 """Todos and notes, persisted as rows in the backing Google Sheet.
 
 Three tabs:
-  * ``Todos``  — id, title, due, done, created_at, completed_at
+  * ``Todos``  — id, title, due, done, created_at, completed_at, event_id
   * ``Lists``  — id, title, archived, created_at, archived_at  (a note / shopping list)
   * ``Items``  — id, list_id, text, checked, created_at        (lines within a list)
+
+A todo with a ``due`` date is mirrored onto the Google Calendar as an all-day
+event; ``event_id`` links the row to that event so edits/deletes stay in sync.
 
 Reads are cached for a few seconds so a polling kiosk doesn't hammer the Sheets
 API; every write busts the relevant cache key.
@@ -11,13 +14,18 @@ API; every write busts the relevant cache key.
 from __future__ import annotations
 
 import datetime as dt
+import logging
 import uuid
 
 from django.core.cache import cache
 
 from core.google_sheets import SheetTable
 
-TODOS = SheetTable("Todos", ["id", "title", "due", "done", "created_at", "completed_at"])
+logger = logging.getLogger(__name__)
+
+TODOS = SheetTable(
+    "Todos", ["id", "title", "due", "done", "created_at", "completed_at", "event_id"]
+)
 LISTS = SheetTable("Lists", ["id", "title", "archived", "created_at", "archived_at"])
 ITEMS = SheetTable("Items", ["id", "list_id", "text", "checked", "created_at"])
 
@@ -36,6 +44,63 @@ def _now() -> str:
 
 def _truthy(value: str) -> bool:
     return str(value).strip().upper() == "TRUE"
+
+
+# --- Calendar mirror -------------------------------------------------------
+# A dated todo is reflected onto the Google Calendar as an all-day event. The
+# calendar is a *best-effort mirror*: if Google is down or the token lacks the
+# write scope, we log and carry on — losing the mirror must never lose the todo.
+_schema_ready = False
+
+
+def _ensure_todos_schema() -> None:
+    """Add the ``event_id`` column header to a pre-existing Todos tab (once).
+
+    Sheets created before this feature have a 6-column header; appending a 7th
+    value without a matching header would be invisible on read. ``ensure()``
+    rewrites the header row to include ``event_id``. Guarded so it runs at most
+    once per worker process (it costs a couple of API calls)."""
+    global _schema_ready
+    if _schema_ready:
+        return
+    try:
+        TODOS.ensure()
+    except Exception:  # noqa: BLE001 — never block a write on a schema check
+        logger.exception("Ensuring Todos schema failed")
+        return
+    _schema_ready = True
+
+
+def _sync_event(event_id: str, title: str, due: str) -> str:
+    """Reconcile a todo's calendar event after create/edit; return the event id.
+
+    no due → delete any event and return "";  due + no event → create one;
+    due + event → patch it. On any failure, leave the stored link unchanged."""
+    try:
+        from calendar_app import services as calendar
+
+        if not due:
+            if event_id:
+                calendar.delete_event(event_id)
+            return ""
+        if event_id:
+            calendar.update_event(event_id, title, due)
+            return event_id
+        return calendar.create_event(title, due)
+    except Exception:  # noqa: BLE001 — calendar mirror is best-effort
+        logger.exception("Mirroring todo onto calendar failed")
+        return event_id
+
+
+def _delete_event(event_id: str) -> None:
+    if not event_id:
+        return
+    try:
+        from calendar_app import services as calendar
+
+        calendar.delete_event(event_id)
+    except Exception:  # noqa: BLE001 — best-effort
+        logger.exception("Deleting mirrored calendar event failed")
 
 
 # --- Todos -----------------------------------------------------------------
@@ -59,6 +124,7 @@ def list_todos() -> list[dict]:
 
 
 def add_todo(title: str, due: str = "") -> dict:
+    _ensure_todos_schema()
     rec = {
         "id": _new_id(),
         "title": title,
@@ -66,6 +132,8 @@ def add_todo(title: str, due: str = "") -> dict:
         "done": "FALSE",
         "created_at": _now(),
         "completed_at": "",
+        # A dated todo gets a matching all-day calendar event (best-effort).
+        "event_id": _sync_event("", title, due),
     }
     TODOS.append(rec)
     cache.delete(_TODOS_KEY)
@@ -76,6 +144,7 @@ def update_todo(todo_id: str, *, title=None, due=None, done=None) -> dict | None
     row = TODOS.find(todo_id)
     if not row:
         return None
+    _ensure_todos_schema()
     rec = {c: row.get(c, "") for c in TODOS.columns}
     if title is not None:
         rec["title"] = title
@@ -84,6 +153,10 @@ def update_todo(todo_id: str, *, title=None, due=None, done=None) -> dict | None
     if done is not None:
         rec["done"] = "TRUE" if done else "FALSE"
         rec["completed_at"] = _now() if done else ""
+    # Re-mirror onto the calendar only when the title or date changed. Completing
+    # a todo leaves its event in place by design (it stays as a record).
+    if title is not None or due is not None:
+        rec["event_id"] = _sync_event(rec.get("event_id", ""), rec["title"], rec["due"])
     TODOS.update(row["_row"], rec)
     cache.delete(_TODOS_KEY)
     return _todo_dto(rec)
@@ -93,6 +166,7 @@ def delete_todo(todo_id: str) -> bool:
     row = TODOS.find(todo_id)
     if not row:
         return False
+    _delete_event(row.get("event_id", ""))
     TODOS.delete(row["_row"])
     cache.delete(_TODOS_KEY)
     return True

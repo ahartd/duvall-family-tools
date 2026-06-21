@@ -6,11 +6,12 @@ interface Props {
   anchor: Date
   now: Date
   byDay: Map<string, CalendarEvent[]>
+  onAddDay: (dayKey: string) => void
 }
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-export function WeekView({ anchor, now, byDay }: Props) {
+export function WeekView({ anchor, now, byDay, onAddDay }: Props) {
   const start = addDays(startOfDay(anchor), -anchor.getDay())
   const days = Array.from({ length: 7 }, (_, i) => addDays(start, i))
   const todayKey = dayKey(now)
@@ -22,7 +23,14 @@ export function WeekView({ anchor, now, byDay }: Props) {
         const events = byDay.get(key) ?? []
         return (
           <div key={key} className={`week-col${key === todayKey ? ' today' : ''}`}>
-            <div className="week-head">
+            <div
+              className="week-head"
+              role="button"
+              tabIndex={0}
+              onClick={() => onAddDay(key)}
+              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onAddDay(key)}
+              title="Add an event on this day"
+            >
               <span className="week-dow">{WEEKDAYS[d.getDay()]}</span>
               <span className="week-num">{d.getDate()}</span>
             </div>
