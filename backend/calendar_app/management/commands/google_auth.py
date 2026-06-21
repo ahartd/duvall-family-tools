@@ -9,19 +9,20 @@ client-secret JSON via --client-secrets) to run the installed-app loopback
 flow, then prints the refresh token to paste into your deployment's
 GOOGLE_REFRESH_TOKEN environment variable.
 
-The token is granted two scopes: read-only Calendar (for the calendar/dashboard
-tools) and read/write Sheets (for the todos/notes tools, which store data in the
-backing spreadsheet). Re-run this whenever the set of scopes changes.
+The token is granted three scopes: read-only Calendar (calendar/dashboard
+viewing), read/write Calendar *events* (so dated todos mirror onto the calendar),
+and read/write Sheets (the todos/notes datastore). Re-run this whenever the set
+of scopes changes.
 """
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
-from calendar_app.services import CALENDAR_READONLY_SCOPE
+from calendar_app.services import CALENDAR_READONLY_SCOPE, CALENDAR_WRITE_SCOPE
 from core.google_sheets import SHEETS_SCOPE
 
 
 class Command(BaseCommand):
-    help = "Obtain the Google refresh token (Calendar read + Sheets read/write) via OAuth."
+    help = "Obtain the Google refresh token (Calendar read+events + Sheets read/write) via OAuth."
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -46,7 +47,7 @@ class Command(BaseCommand):
         except ImportError as exc:
             raise CommandError("google-auth-oauthlib is not installed.") from exc
 
-        scopes = [CALENDAR_READONLY_SCOPE, SHEETS_SCOPE]
+        scopes = [CALENDAR_READONLY_SCOPE, CALENDAR_WRITE_SCOPE, SHEETS_SCOPE]
         client_secrets = options["client_secrets"]
 
         if client_secrets:
@@ -95,7 +96,7 @@ class Command(BaseCommand):
         self.stdout.write(f"GOOGLE_REFRESH_TOKEN={creds.refresh_token}\n")
         self.stdout.write(
             self.style.WARNING(
-                "\nKeep this secret — it grants read-only calendar access and "
-                "read/write access to your Sheets.\n"
+                "\nKeep this secret — it grants read + event-write access to your "
+                "calendar and read/write access to your Sheets.\n"
             )
         )

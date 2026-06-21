@@ -9,6 +9,7 @@ import { Header } from './components/Header'
 import { MonthGrid } from './components/MonthGrid'
 import { AgendaList } from './components/AgendaList'
 import { WeekView } from './components/WeekView'
+import { EventForm } from './components/EventForm'
 
 const DATA_REFRESH_MS = 5 * 60 * 1000 // re-fetch events every 5 minutes
 const CLOCK_TICK_MS = 30 * 1000 // update the clock / "today" highlight
@@ -61,6 +62,8 @@ export default function App() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  // When set, the add-event form is open, pre-filled with this YYYY-MM-DD.
+  const [addDate, setAddDate] = useState<string | null>(null)
 
   const { start, end } = useMemo(() => rangeFor(view, anchor), [view, anchor])
 
@@ -73,6 +76,23 @@ export default function App() {
   const lastInteraction = useRef<number>(Date.now())
   const markInteraction = useCallback(() => {
     lastInteraction.current = Date.now()
+  }, [])
+
+  // Open the add-event form pre-filled to a given day (also counts as activity
+  // so the kiosk doesn't auto-return while someone is mid-entry).
+  const openAdd = useCallback(
+    (key: string) => {
+      markInteraction()
+      setAddDate(key)
+    },
+    [markInteraction],
+  )
+
+  // Show the new event immediately; the next poll (cache was bumped server-side)
+  // returns the authoritative list and replaces this optimistic copy.
+  const onCreated = useCallback((ev: CalendarEvent) => {
+    setEvents((prev) => [...prev, ev])
+    setAddDate(null)
   }, [])
 
   const load = useCallback(async () => {
@@ -174,6 +194,7 @@ export default function App() {
           markInteraction()
           setAnchor(new Date())
         }}
+        onAdd={() => openAdd(dayKey(now))}
       />
       {error ? (
         <div className="banner error">
@@ -182,10 +203,18 @@ export default function App() {
         </div>
       ) : null}
       <main className="view">
-        {view === 'month' && <MonthGrid anchor={anchor} now={now} byDay={byDay} />}
-        {view === 'week' && <WeekView anchor={anchor} now={now} byDay={byDay} />}
+        {view === 'month' && <MonthGrid anchor={anchor} now={now} byDay={byDay} onAddDay={openAdd} />}
+        {view === 'week' && <WeekView anchor={anchor} now={now} byDay={byDay} onAddDay={openAdd} />}
         {view === 'agenda' && <AgendaList now={now} byDay={byDay} start={start} end={end} />}
       </main>
+      {addDate !== null ? (
+        <EventForm
+          token={token}
+          initialDate={addDate}
+          onClose={() => setAddDate(null)}
+          onCreated={onCreated}
+        />
+      ) : null}
     </div>
   )
 }

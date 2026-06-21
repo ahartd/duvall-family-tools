@@ -92,9 +92,10 @@ is for production/built assets; in dev you use the Vite server.)
 
 ## Connecting your Google Calendar (one-time)
 
-The app reads one calendar, read-only, via OAuth2. You do a one-time browser
-authorization locally; the resulting **refresh token** is then stored as an env
-var. Sourced from official Google docs (see links at the bottom).
+The app reads one calendar via OAuth2 (and, once you grant the events scope below,
+can also **create events** from the calendar's "+ Add" button). You do a one-time
+browser authorization locally; the resulting **refresh token** is then stored as
+an env var. Sourced from official Google docs (see links at the bottom).
 
 ### A. Google Cloud setup
 
@@ -150,6 +151,13 @@ refresh token on each request and auto-refreshes the short-lived access token.
 To read a **non-primary** calendar, set `GOOGLE_CALENDAR_ID` to that calendar's
 ID (Google Calendar → calendar settings → "Integrate calendar" → Calendar ID).
 
+> **Want the "+ Add event" button to work?** Reading needs only the read-only
+> scope above, but *creating* events (the calendar's "+ Add" button and tapping a
+> day) needs the `https://www.googleapis.com/auth/calendar.events` write scope —
+> the same one the dated-todos mirror uses. Add it to the consent screen and
+> re-run `google_auth` as described under [Todos & Notes storage](#b-enable-the-sheets-api--grant-the-scopes-re-auth-if-needed)
+> below. The authorising account must have **edit access** to `GOOGLE_CALENDAR_ID`.
+
 ---
 
 ## Todos & Notes storage (Google Sheet)
@@ -178,36 +186,48 @@ auto-creates three tabs with these columns:
 
 | Tab | Columns | Holds |
 |---|---|---|
-| `Todos` | id, title, due, done, created_at, completed_at | the shared to-do list |
+| `Todos` | id, title, due, done, created_at, completed_at, event_id | the shared to-do list (`event_id` links a dated todo to its calendar event) |
 | `Lists` | id, title, archived, created_at, archived_at | each note / shopping list |
 | `Items` | id, list_id, text, checked, created_at | the lines within a list |
 
 You can open the sheet anytime to read or hand-edit the data; the app re-reads it
 (cached ~8s) on the next request.
 
-### B. Enable the Sheets API + grant the scope (re-auth if needed)
+### B. Enable the Sheets API + grant the scopes (re-auth if needed)
 
-The calendar setup only enabled the *Calendar* API and its scope, so the Todos/
-Notes tools need two more things on the Google side (the app code already requests
-the scope — there's nothing to change there):
+The calendar setup only enabled the *Calendar* API and its read-only scope, so the
+Todos/Notes tools need a few more things on the Google side (the app code already
+requests the scopes — there's nothing to change there):
 
 1. **Enable the Google Sheets API.** *APIs & Services → Library →* search
    "**Google Sheets API**" → **Enable**. Without this, writes fail with a 403
    even if the token has the right scope.
-2. **Add the scope to the OAuth consent screen.** Under *Data Access*, add
-   `https://www.googleapis.com/auth/spreadsheets` (Google marks it **sensitive**,
-   exactly like the calendar-readonly scope — expected, not "restricted").
+2. **Add two scopes to the OAuth consent screen.** Under *Data Access*, add:
+   - `https://www.googleapis.com/auth/spreadsheets` — the Todos/Notes datastore.
+   - `https://www.googleapis.com/auth/calendar.events` — lets a **dated todo
+     mirror onto your calendar** as an all-day event (see below). Omit this one
+     if you don't want that behavior; the rest of Todos/Notes still works.
 
-The `google_auth` helper already requests **both** scopes (calendar-read +
-spreadsheets), so:
+   Google marks both **sensitive** (expected, not "restricted").
 
-- **Fresh setup:** nothing extra — `python manage.py google_auth` grants both
+The `google_auth` helper requests **all three** scopes (calendar-read +
+calendar-events + spreadsheets), so:
+
+- **Fresh setup:** nothing extra — `python manage.py google_auth` grants all the
   scopes in one go.
-- **Existing calendar-only token** (created before the Todos/Notes tools existed):
-  a token's scopes are frozen at consent time, so your old `GOOGLE_REFRESH_TOKEN`
-  can't touch Sheets and writes will fail with a permission error. **Re-run
-  `python manage.py google_auth`**, approve the new permission, and replace
+- **Existing token** (minted before these scopes were added): a token's scopes are
+  frozen at consent time, so an older `GOOGLE_REFRESH_TOKEN` can't touch Sheets or
+  write calendar events and those writes fail with a permission error. **Re-run
+  `python manage.py google_auth`**, approve the new permissions, and replace
   `GOOGLE_REFRESH_TOKEN` (locally and on Render).
+
+> **Dated todos → calendar:** once the `calendar.events` scope is granted, adding
+> a to-do with a due date automatically creates a matching **all-day event** on
+> `GOOGLE_CALENDAR_ID` (the same calendar the wall display reads). Editing the
+> todo's title or date updates the event; deleting the todo removes it; *completing*
+> a todo leaves the event in place as a record. The mirror is best-effort — if
+> Google is unreachable the todo is still saved, just without (or without updating)
+> its event. The authorising account must have **edit access** to that calendar.
 
 > **Heads-up on scope breadth:** `.../auth/spreadsheets` is **account-wide**
 > read/write — Google has no per-file OAuth scope, so this token can reach *every*
